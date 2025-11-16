@@ -51,6 +51,160 @@ def plot_stock_price(ticker):
     plt.savefig('stock_price.png')
     plt.close()
 
+functions = [
+    {
+        'name': 'get_stock_price',
+        'description': 'Gets the latest stock price given the ticker symbol of a company.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'ticker': {
+                    'type': 'string',
+                    'description': 'The stock ticker symbol for a company (for example AAPL for Apple).'
+                }
+            },
+            'required': ['ticker']
+        }
+    },
+    {
+        'name': 'calcuate_SMA',
+        'description': 'Calculates the Simple Moving Average (SMA) for a given stock ticker and a window.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'ticker': {
+                    'type': 'string',
+                    'description': 'The stock ticker symbol for a company (e.g., AAPL for Apple).'
+                },
+                'window': {
+                    'type': 'integer',
+                    'description': 'The timeframe to consider when calcualating the SMA.'
+                }
+            },
+            'required': ['ticker', 'window']
+        }
+    },
+    {
+        'name': 'calcuate_EMA',
+        'description': 'Calculates the Exponential Moving Average (EMA) for a given stock ticker and a window.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'ticker': {
+                    'type': 'string',
+                    'description': 'The stock ticker symbol for a company (e.g., AAPL for Apple).'
+                },
+                'window': {
+                    'type': 'integer',
+                    'description': 'The timeframe to consider when calcualating the EMA.'
+                }
+            },
+            'required': ['ticker', 'window']
+        }
+    },
+    {
+        'name': 'calcuate_RSI',
+        'description': 'Calculates the Relative Strength Index (RSI) for a given stock ticker.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'ticker': {
+                    'type': 'string',
+                    'description': 'The stock ticker symbol for a company (e.g., AAPL for Apple).'
+                }
+            },
+            'required': ['ticker']
+        }
+    },
+    {
+        'name': 'calculate_MACD',
+        'description': 'Calculates the Moving Average Convergence Divergence (MACD) for a given stock ticker.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'ticker': {
+                    'type': 'string',
+                    'description': 'The stock ticker symbol for a company (e.g., AAPL for Apple).'
+                }
+            },
+            'required': ['ticker']
+        }
+    },
+    {
+        'name': 'plot_stock_price',
+        'description': 'Plots the stock price for the last year given the stock ticker symbol of a company.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'ticker': {
+                    'type': 'string',
+                    'description': 'The stock ticker symbol for a company (e.g., AAPL for Apple).'
+                }
+            },
+            'required': ['ticker']
+        }
 
+    }
+]
 
+available_functions = {
+    'get_stock_price': get_stock_price,
+    'calcuate_SMA': calcuate_SMA,
+    'calcuate_EMA': calcuate_EMA,
+    'calcuate_RSI': calcuate_RSI,
+    'calculate_MACD': calculate_MACD,
+    'plot_stock_price': plot_stock_price
+}
 
+if 'messages' not in st.session_state:
+    st.session_state['messages'] = []
+
+st.title('Stock Analysis Chatbot Assistant')
+
+user_input = st.text_input('Your input:')
+
+if user_input:
+    try: 
+        st.session_state['messages'].append({'role': 'user', 'content': user_input})
+
+        response = openai.ChatCompletion.create(
+            model='gpt-4-0613',
+            messages=st.session_state['messages'],
+            functions=functions,
+            function_call='auto'
+        )
+
+        response_message = response['choices'][0]['message']
+
+        if response_message.get('function_call'):
+            function_name = response_message['function_call']['name']
+            function_to_call = available_functions[function_name]
+            function_args = json.loads(response_message['function_call']['arguments'])
+            if function_name in ['get_stock_price', 'calculateRSI', 'calculate_MACD', 'plot_stock_price']:
+                args_dict = {'ticker': function_args.get('ticker')}
+            elif function_name in ['calcuate_SMA', 'calcuate_EMA']:
+                args_dict = {'ticker': function_args.get('ticker'), 'window': function_args.get('window')}
+
+            function_to_call = available_functions[function_name]
+            funciton_response = function_to_call(**args_dict)
+
+            if function_name == 'plot_stock_price':
+                st.image('stock_price.png')
+            else: 
+                st.session_state['messages'].append(response_message)
+                st.session_state['messages'].append({
+                    'role': 'function',
+                    'name': function_name,
+                    'content': funciton_response
+                })
+                second_response = openai.ChatCompletion.create(
+                    model='gpt-4-0613',
+                    messages=st.session_state['messages']
+                )
+                st.text(second_response['choices'][0]['message']['content'])
+                st.session_state['messages'].append({'role': 'assistant', 'content': second_response['choices'][0]['message']['content']})
+        else: 
+            st.text(response_message['content'])
+            st.session_state['messages'].append({'role': 'assistant', 'content': response_message['content']})
+    except:
+        st.text('Try again.')
