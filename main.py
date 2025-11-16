@@ -1,11 +1,11 @@
 import json
-import openai
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 import yfinance as yf
+from openai import OpenAI
 
-openai.api_key = open('API_KEY', 'r').read()
+client = OpenAI(api_key=open('API_KEY', 'r').read().strip())
 
 def get_stock_price(ticker):
     return str(yf.Ticker(ticker).history(period='1y').iloc[-1].Close)
@@ -161,50 +161,47 @@ if 'messages' not in st.session_state:
 
 st.title('Stock Analysis Chatbot Assistant')
 
-user_input = st.text_input('Your input:')
+user_input = st.text_input('Your question:')
 
 if user_input:
     try: 
         st.session_state['messages'].append({'role': 'user', 'content': user_input})
 
-        response = openai.ChatCompletion.create(
-            model='gpt-4-0613',
-            messages=st.session_state['messages'],
-            functions=functions,
-            function_call='auto'
-        )
+        completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=st.session_state["messages"],
+        functions=functions,
+        function_call="auto"
+    )
 
-        response_message = response['choices'][0]['message']
+        msg = completion.choices[0].message
 
-        if response_message.get('function_call'):
-            function_name = response_message['function_call']['name']
-            function_to_call = available_functions[function_name]
-            function_args = json.loads(response_message['function_call']['arguments'])
-            if function_name in ['get_stock_price', 'calculateRSI', 'calculate_MACD', 'plot_stock_price']:
-                args_dict = {'ticker': function_args.get('ticker')}
-            elif function_name in ['calcuate_SMA', 'calcuate_EMA']:
-                args_dict = {'ticker': function_args.get('ticker'), 'window': function_args.get('window')}
+        if msg.function_call:
+            fn_name = msg.function_call.name
+            args = json.loads(msg.function_call.arguments)
 
-            function_to_call = available_functions[function_name]
-            funciton_response = function_to_call(**args_dict)
+            fn = available_functions[fn_name]
+            result = fn(**args)
 
-            if function_name == 'plot_stock_price':
-                st.image('stock_price.png')
-            else: 
-                st.session_state['messages'].append(response_message)
-                st.session_state['messages'].append({
-                    'role': 'function',
-                    'name': function_name,
-                    'content': funciton_response
-                })
-                second_response = openai.ChatCompletion.create(
-                    model='gpt-4-0613',
-                    messages=st.session_state['messages']
+            st.session_state["messages"].append(msg)
+            st.session_state["messages"].append({
+                "role": "function",
+                "name": fn_name,
+                "content": result
+            })
+            
+            if fn_name == "plot_stock_price":
+                st.image("stock_price.png")
+            else:
+                completion2 = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=st.session_state["messages"]
                 )
-                st.text(second_response['choices'][0]['message']['content'])
-                st.session_state['messages'].append({'role': 'assistant', 'content': second_response['choices'][0]['message']['content']})
-        else: 
-            st.text(response_message['content'])
-            st.session_state['messages'].append({'role': 'assistant', 'content': response_message['content']})
-    except:
-        st.text('Try again.')
+                final_msg = completion2.choices[0].message["content"]
+                st.write(final_msg)
+                st.session_state["messages"].append({"role": "assistant", "content": final_msg})
+        else:
+            st.write(msg["content"])
+            st.session_state["messages"].append({"role": "assistant", "content": msg["content"]})
+    except Exception as e:
+        raise e
