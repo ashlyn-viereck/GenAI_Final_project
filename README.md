@@ -13,7 +13,7 @@ An intelligent stock analysis chatbot powered by OpenAI's GPT-4 and real-time fi
 - **Interactive Price Charts**: Visualize stock price trends over time
 - **Natural Language Interface**: Ask questions in plain English and get intelligent responses
 
-##  Technologies Used
+##  Technology Used
 
 - **Python 3.x**
 - **OpenAI GPT-4o-mini**: Powers the conversational AI
@@ -84,7 +84,7 @@ streamlit run app.py
 - [Sara Avila]
 - [Ashlyn Viereck]
 
-##  Course Information
+##  Course Info
 
 Final Project for Generative AI Course  
 [Creighton University] - [Fall / 2025]
