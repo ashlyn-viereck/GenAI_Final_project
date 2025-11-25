@@ -54,11 +54,7 @@ streamlit run app.py
 
 2. Open your browser and navigate to the provided local URL (typically `http://localhost:8501`)
 
-3. Start asking questions about stocks! Example queries:
-   - "What's the current price of AAPL?"
-   - "Calculate the RSI for TSLA"
-   - "Show me the 50-day moving average for MSFT"
-   - "Plot the stock price for GOOGL"
+3. Start asking questions about stocks! 
 
 ##  Key Functions
 
